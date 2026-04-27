@@ -1,0 +1,74 @@
+Bootstrap: docker
+From: ubuntu:24.04
+
+
+%files
+
+    ./macs3_conda_for_pipeline_file.yml /opt
+
+%post
+    
+    #apt-get update 
+
+    
+    # apt-get update && apt-get install -y --no-install-recommends \
+    #     build-essential \
+    #     ca-certificates \
+    #     curl \
+    #     wget \
+    #     git \
+    #     fakeroot
+
+    apt-get -o APT::Sandbox::User=root update
+    apt-get -o APT::Sandbox::User=root install -y --no-install-recommends \
+        fakeroot curl ca-certificates wget locales 
+    
+    # generate the local
+    locale-gen en_US.UTF-8
+
+    # apt-get -o APT::Sandbox::User=root update && apt-get -o APT::Sandbox::User=root install -y --no-install-recommends \
+        # fakeroot
+
+    # following the steps to install miniconda from their website and the rockefeller hpc guides
+
+    # curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+
+    bash Miniconda3-latest-Linux-x86_64.sh -b -p /usr/local/miniconda
+    rm Miniconda3-latest-Linux-x86_64.sh
+
+
+    # source doesnt work here. so put it in the path
+    # also att this command to the environment section
+    export PATH="/usr/local/miniconda/bin:$PATH"
+
+    # now make the r_language conda env first
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+    conda env create --file /opt/macs3_conda_for_pipeline_file.yml --yes --quiet
+    
+
+%environment
+
+    # To prevent the container from ever looking at your host's R libraries (which caused that segfault), add this to your %environment
+    export LC_ALL=en_US.UTF-8
+    export LANG=en_US.UTF-8
+    export R_LIBS_USER='/root/R'
+
+
+
+    # export PATH="/usr/local/miniconda/bin:$PATH"
+    export PATH="/usr/local/miniconda/envs/macs3_rj/bin:/usr/local/miniconda/bin:$PATH"
+    export CONDA_DEFAULT_ENV="macs3_rj"
+
+
+%test
+
+    # use this to test if miniconda was installed
+    # conda env list
+    export PATH="/usr/local/miniconda/envs/macs3_rj/bin:/usr/local/miniconda/bin:$PATH"
+    # Check if R is actually available from the environment
+    # R --version
+
+    macs2 --version
+    conda info --envs
